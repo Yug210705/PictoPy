@@ -105,9 +105,16 @@ def image_util_classify_and_face_detect_images(
     untagged_images: List[Dict[str, str]],
 ) -> None:
     """Classify untagged images and detect faces if applicable."""
-    object_classifier = ObjectClassifier()
-    face_detector = FaceDetector()
+    object_classifier = None
+    face_detector = None
     try:
+        try:
+            object_classifier = ObjectClassifier()
+            face_detector = FaceDetector()
+        except Exception as e:
+            logger.error(f"Failed to initialize classifiers: {e}")
+            return
+
         for image in untagged_images:
             image_path = image["path"]
             image_id = image["id"]
@@ -131,9 +138,18 @@ def image_util_classify_and_face_detect_images(
             # Step 4: Update the image status in the database
             db_update_image_tagged_status(image_id, True)
     finally:
-        # Ensure resources are cleaned up
-        object_classifier.close()
-        face_detector.close()
+        # Ensure resources are cleaned up safely
+        if object_classifier:
+            try:
+                object_classifier.close()
+            except Exception as e:
+                logger.error(f"Error closing object classifier: {e}")
+        
+        if face_detector:
+            try:
+                face_detector.close()
+            except Exception as e:
+                logger.error(f"Error closing face detector: {e}")
 
 
 def image_util_prepare_image_records(
