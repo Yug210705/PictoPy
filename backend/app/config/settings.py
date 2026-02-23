@@ -29,3 +29,9 @@ else:
     DATABASE_PATH = os.path.join(user_data_dir("PictoPy"), "database", "PictoPy.db")
 THUMBNAIL_IMAGES_PATH = os.path.join(user_data_dir("PictoPy"), "thumbnails")
 IMAGES_PATH = "./images"
+# Shutdown protection settings
+# If SHUTDOWN_TOKEN is set in environment, the shutdown endpoint requires the header
+# 'X-Shutdown-Token' with the same value. By default remote shutdowns are not allowed
+# unless ALLOW_REMOTE_SHUTDOWN is set to 'true' in the environment.
+SHUTDOWN_TOKEN = os.getenv("SHUTDOWN_TOKEN")
+ALLOW_REMOTE_SHUTDOWN = os.getenv("ALLOW_REMOTE_SHUTDOWN", "false").lower() == "true"

@@ -1,10 +1,12 @@
 import asyncio
+import asyncio
 import os
 import platform
 import signal
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from app.logging.setup_logging import get_logger
+from app.config.settings import ALLOW_REMOTE_SHUTDOWN, SHUTDOWN_TOKEN
 
 logger = get_logger(__name__)
 
@@ -37,7 +39,7 @@ async def _delayed_shutdown(delay: float = 0.5):
 
 
 @router.post("/shutdown", response_model=ShutdownResponse)
-async def shutdown():
+async def shutdown(x_shutdown_token: str | None = Header(None)):
     """
     Gracefully shutdown the PictoPy backend.
 
@@ -48,6 +50,16 @@ async def shutdown():
         ShutdownResponse with status and message
     """
     logger.info("Shutdown request received for PictoPy backend")
+
+    # Security: prevent unauthenticated remote shutdowns unless explicitly allowed.
+    if not ALLOW_REMOTE_SHUTDOWN:
+        logger.warning("Remote shutdown attempt blocked: ALLOW_REMOTE_SHUTDOWN is False")
+        raise HTTPException(status_code=403, detail="Remote shutdown is disabled on this server")
+
+    if SHUTDOWN_TOKEN:
+        if not x_shutdown_token or x_shutdown_token != SHUTDOWN_TOKEN:
+            logger.warning("Shutdown attempt with invalid or missing shutdown token")
+            raise HTTPException(status_code=401, detail="Invalid shutdown token")
 
     # Define callback to handle potential exceptions in the background task
     def _handle_shutdown_exception(task: asyncio.Task):
